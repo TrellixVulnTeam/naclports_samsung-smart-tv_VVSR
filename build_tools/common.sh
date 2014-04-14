@@ -358,7 +358,8 @@ CheckSDKVersion() {
   if [ -n "${RESULT:-}" ]; then
     echo "The SDK in \$NACL_SDK_ROOT is too old to build ${PACKAGE_NAME}."
     echo ${RESULT}
-    exit -1
+    # exit -1
+    echo "... nevermind"
   fi
 }
 

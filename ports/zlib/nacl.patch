@@ -15,3 +15,19 @@ index b77a8a8..e52609f 100755
    CYGWIN* | Cygwin* | cygwin* | OS/2*)
          EXE='.exe' ;;
    MINGW* | mingw*)
+@@ -796,6 +796,7 @@ sed < Makefile.in "
+ /^LDCONFIG *=/s#=.*#=$LDCONFIG#
+ /^LDSHAREDLIBC *=/s#=.*#=$LDSHAREDLIBC#
+ /^EXE *=/s#=.*#=$EXE#
++/^TEST_LDFLAGS *=/s#=.*#=\-L\.\ \-lnosys\ libz\.a#
+ /^prefix *=/s#=.*#=$prefix#
+ /^exec_prefix *=/s#=.*#=$exec_prefix#
+ /^libdir *=/s#=.*#=$libdir#
+@@ -822,6 +823,7 @@ sed < zlib.pc.in "
+ /^ARFLAGS *=/s#=.*#=$ARFLAGS#
+ /^RANLIB *=/s#=.*#=$RANLIB#
+ /^EXE *=/s#=.*#=$EXE#
++/^TEST_LDFLAGS *=/s#=.*#=\-L\.\ \-lnosys\ libz\.a#
+ /^prefix *=/s#=.*#=$prefix#
+ /^exec_prefix *=/s#=.*#=$exec_prefix#
+ /^libdir *=/s#=.*#=$libdir#

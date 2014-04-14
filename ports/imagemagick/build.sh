@@ -10,6 +10,7 @@ if [ "${NACL_LIBC}" = "newlib" ]; then
   # https://code.google.com/p/nativeclient/issues/detail?id=3790
   NACLPORTS_CPPFLAGS+=" -DSSIZE_MAX=LONG_MAX"
   EXE_DIR=""
+  export NACLPORTS_LDFLAGS="${NACLPORTS_LDFLAGS} -lnosys"
 else
   EXE_DIR=".libs/"
 fi

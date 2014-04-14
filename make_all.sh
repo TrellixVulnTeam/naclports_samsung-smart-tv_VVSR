@@ -10,6 +10,9 @@
 set -x
 set -e
 
+export NACL_DEBUG ?= 1
+export NACLPORTS_PREFIX ?= $NACL_SDK_ROOT/ports
+
 TARGETS="$*"
 TARGETS=${TARGETS:-all}
 export BUILD_FLAGS=--ignore-disabled
@@ -38,6 +41,6 @@ if [ -e ${NACL_SDK_ROOT}/toolchain/*_arm_bionic ]; then
 fi
 
 # PNaCl
-export NACL_ARCH=pnacl
-export TOOLCHAIN=pnacl
-make ${TARGETS}
+# export NACL_ARCH=pnacl
+# export TOOLCHAIN=pnacl
+# make ${TARGETS}
