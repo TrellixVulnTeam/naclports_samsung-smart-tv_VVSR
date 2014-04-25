@@ -41,6 +41,6 @@ if [ -e ${NACL_SDK_ROOT}/toolchain/*_arm_bionic ]; then
 fi
 
 # PNaCl
-# export NACL_ARCH=pnacl
-# export TOOLCHAIN=pnacl
-# make ${TARGETS}
+export NACL_ARCH=pnacl
+export TOOLCHAIN=pnacl
+make ${TARGETS}
