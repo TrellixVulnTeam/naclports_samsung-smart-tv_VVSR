@@ -1173,9 +1173,17 @@ TranslateAndWriteSelLdrScript() {
   local NEXE=$3
   local SCRIPT=$4
   # Finalize the pexe to make sure it is finalizeable.
-  TimeCommand ${PNACLFINALIZE} ${PEXE} -o ${PEXE_FINAL}
+  if [ ! -f ${PNACLFINALIZE} ]; then
+    echo "There's no pnacl-finalize here"
+  else
+    TimeCommand ${PNACLFINALIZE} ${PEXE} -o ${PEXE_FINAL}
+  fi
   # Translate to the appropriate version.
-  TimeCommand ${TRANSLATOR} ${PEXE_FINAL} -arch ${ARCH} -o ${NEXE}
+  if [ ! -f ${PEXE_FINAL} ]; then
+    TimeCommand ${TRANSLATOR} ${PEXE} -arch ${ARCH} -o ${NEXE}
+  else
+    TimeCommand ${TRANSLATOR} ${PEXE_FINAL} -arch ${ARCH} -o ${NEXE}
+  fi
   WriteSelLdrScriptForPNaCl ${SCRIPT} ${NEXE} ${ARCH}
 }
 
@@ -1223,7 +1231,11 @@ HERE
 FinalizePexe() {
   local pexe=$1
   Banner "Finalizing ${pexe}"
-  TimeCommand ${PNACLFINALIZE} ${pexe}
+  if [ ! -f ${PNACLFINALIZE} ]; then
+    echo "There's no pnacl-finalize here"
+  else
+    TimeCommand ${PNACLFINALIZE} ${pexe}
+  fi
 }
 
 
