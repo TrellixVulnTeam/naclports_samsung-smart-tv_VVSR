@@ -115,6 +115,12 @@ else
   fi
 fi
 
+# don't know what's happenning with pnacl folders... but this helps!
+if [ ${TOOLCHAIN} = "pnacl" ]; then
+  NACLPORTS_LDFLAGS+=" -L${NACLPORTS_PREFIX}/../../../mac_pnacl/usr/lib -lnosys"
+  NACLPORTS_CPPFLAGS+=" -I${NACLPORTS_PREFIX}/../../../mac_pnacl/usr/include"
+fi
+
 # libcli_main.a has a circular dependency which makes static link fail
 # (cli_main => nacl_io => ppapi_cpp => cli_main). To break this loop,
 # you should use this instead of -lcli_main.

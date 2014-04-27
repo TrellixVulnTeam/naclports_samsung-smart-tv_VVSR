@@ -10,7 +10,7 @@
 set -x
 set -e
 
-export NACL_DEBUG=1
+export NACL_DEBUG=${NACL_DEBUG:-1}
 export NACLPORTS_PREFIX=$NACL_SDK_ROOT/ports
 
 TARGETS="$*"
