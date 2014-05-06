@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <syslog.h>
+#include <sys/poll.h>
 #include <sys/signal.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -55,6 +56,11 @@
 #undef htons
 #undef ntohl
 #undef ntohs
+
+int poll(struct pollfd *fds, nfds_t nfds, int timeout) __attribute__((weak));
+int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
+  UNIMPLEMENTED_NOSYS();
+}
 
 int accept(int sockfd, struct sockaddr *addr,
            socklen_t *addrlen) __attribute__((weak));
@@ -207,6 +213,11 @@ int major(dev_t dev) {
 int minor(dev_t dev) __attribute__((weak));
 int minor(dev_t dev) {
   return dev & 0xff;
+}
+
+int msync(void *addr, size_t length, int flags) __attribute__((weak));
+int msync(void *addr, size_t length, int flags) {
+  UNIMPLEMENTED_NOSYS();
 }
 
 uint32_t ntohl(uint32_t netlong) __attribute__((weak));
@@ -401,4 +412,39 @@ int connect(int sockfd, const struct sockaddr *addr,
 int connect(int sockfd, const struct sockaddr *addr,
                    socklen_t addrlen) {
   UNIMPLEMENTED_FATAL();
+}
+
+char* realpath(const char* path, const char* resolved) __attribute__ ((weak));
+char* realpath(const char* path, const char* resolved) {
+  UNIMPLEMENTED_NOSYS_RTN(NULL);
+}
+
+int getaddrinfo(const char *, const char *, const struct addrinfo *,
+                struct addrinfo **) __attribute__ ((weak));
+int getaddrinfo(const char *node, const char *service,
+                const struct addrinfo *hints, struct addrinfo **res) {
+  errno = ENOSYS;
+  UNIMPLEMENTED_NOSYS_RTN(EAI_SYSTEM);
+}
+
+void freeaddrinfo(struct addrinfo *) __attribute__ ((weak));
+void freeaddrinfo(struct addrinfo *res) {
+  UNIMPLEMENTED();
+}
+
+int getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                char *host, socklen_t hostlen,
+                char *serv, socklen_t servlen,
+                unsigned int flags) __attribute__ ((weak));
+int getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                char *host, socklen_t hostlen,
+                char *serv, socklen_t servlen,
+                unsigned int flags) {
+  UNIMPLEMENTED_NOSYS();
+}
+
+
+char *gai_strerror(int) __attribute__ ((weak));
+char *gai_strerror(int errcode) {
+  UNIMPLEMENTED_NOSYS_RTN(NULL);
 }

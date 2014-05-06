@@ -18,8 +18,17 @@ ifeq ($(V),1)
 VERBOSE?=1
 endif
 
+ifeq ($(V),2)
+VERBOSE?=1
+VERBOSE_BUILD?=1
+endif
+
 ifeq ($(VERBOSE),1)
 BUILD_FLAGS+=-v
+endif
+
+ifeq ($(VERBOSE_BUILD),1)
+BUILD_FLAGS+=--verbose-build
 endif
 
 ifeq ($(FORCE),1)
@@ -48,6 +57,6 @@ reallyclean: clean
 	rm -rf $(NACL_OUT)
 
 %:
-	build_tools/naclports.py install ports/$* $(BUILD_FLAGS)
+	build_tools/naclports.py install $* $(BUILD_FLAGS)
 
 .PHONY: all run clean sdklibs sdklibs_list reallyclean

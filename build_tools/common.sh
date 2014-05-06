@@ -17,6 +17,8 @@
 set -o nounset
 set -o errexit
 
+unset MAKEFLAGS
+
 readonly TOOLS_DIR=$(cd "$(dirname "$BASH_SOURCE")" ; pwd)
 readonly START_DIR=$PWD
 readonly NACL_SRC=$(dirname ${TOOLS_DIR})
@@ -124,6 +126,11 @@ fi
 # you should use this instead of -lcli_main.
 export NACL_CLI_MAIN_LIB="-Wl,--undefined=PSUserCreateInstance -lcli_main"
 
+# Python variables
+NACL_PYSETUP_ARGS=""
+NACL_BUILD_SUBDIR=build
+NACL_INSTALL_SUBDIR=install
+
 # output directories
 readonly NACL_PACKAGES_OUT=${NACL_SRC}/out
 readonly NACL_PACKAGES_ROOT=${NACL_PACKAGES_OUT}/packages
@@ -131,9 +138,10 @@ readonly NACL_PACKAGES_BUILD=${NACL_PACKAGES_OUT}/build
 readonly NACL_PACKAGES_PUBLISH=${NACL_PACKAGES_OUT}/publish
 readonly NACL_PACKAGES_TARBALLS=${NACL_PACKAGES_OUT}/tarballs
 readonly NACL_PACKAGES_STAMPDIR=${NACL_PACKAGES_OUT}/stamp
-
-NACL_BUILD_SUBDIR=build
-NACL_INSTALL_SUBDIR=install
+readonly NACL_HOST_PYROOT=${NACL_PACKAGES_BUILD}/host_python-2.7.5
+readonly NACL_HOST_PYTHON=${NACL_HOST_PYROOT}/bin/python2.7
+readonly NACL_DEST_PYROOT=${NACLPORTS_PREFIX}
+readonly SITE_PACKAGES="lib/python2.7/site-packages/"
 
 # The components of package names cannot contain underscore
 # characters so use x86-64 rather then x86_64 for arch component.
@@ -153,6 +161,7 @@ fi
 
 NACL_BUILD_SUBDIR+=${PACKAGE_SUFFIX}
 NACL_INSTALL_SUBDIR+=${PACKAGE_SUFFIX}
+readonly DEST_PYTHON_OBJS=${NACL_PACKAGES_BUILD}/python-modules/${NACL_BUILD_SUBDIR}
 PACKAGE_FILE=${NACL_PACKAGES_ROOT}/${NAME}_${VERSION}${PACKAGE_SUFFIX}.tar.bz2
 
 # Don't support building with SDKs older than the current stable release
@@ -945,6 +954,28 @@ DefaultBuildStep() {
   LogExecute make -j${OS_JOBS} ${MAKE_TARGETS:-}
 }
 
+DefaultPythonModuleBuildStep() {
+  SetupCrossEnvironment
+  Banner "Build ${PACKAGE_NAME} python module"
+  ChangeDir ${SRC_DIR}
+  if CheckStamp install_dest_${PACKAGE_NAME} ; then
+    return
+  fi
+  LogExecute rm -rf build dist
+  export PYTHONPATH="${NACL_HOST_PYROOT}/${SITE_PACKAGES}"
+  export PYTHONPATH="${PYTHONPATH}:${NACL_DEST_PYROOT}/${SITE_PACKAGES}"
+  export NACL_PORT_BUILD=${1:-dest}
+  export NACL_BUILD_TREE=${NACL_DEST_PYROOT}
+  export CFLAGS="${NACLPORTS_CPPFLAGS} ${NACLPORTS_CFLAGS}"
+  export CXXFLAGS="${NACLPORTS_CPPFLAGS} ${NACLPORTS_CXXFLAGS}"
+  export LDFLAGS=${NACLPORTS_LDFLAGS}
+  LogExecute ${NACL_HOST_PYTHON} setup.py \
+    ${NACL_PYSETUP_ARGS:-} \
+    install --prefix=${NACL_DEST_PYROOT}
+  MakeDir ${DEST_PYTHON_OBJS}
+  LogExecute find build -name "*.o" -exec cp -v {} ${DEST_PYTHON_OBJS} \;
+  TouchStamp install_dest_${PACKAGE_NAME}
+}
 
 DefaultTestStep() {
   echo "No tests defined for ${PACKAGE_NAME}"
@@ -966,6 +997,19 @@ DefaultInstallStep() {
   LogExecute make ${INSTALL_TARGETS:-install} DESTDIR=${DESTDIR}
 }
 
+DefaultPythonModuleInstallStep() {
+  Banner "Installing ${PACKAGE_NAME}"
+  # We've installed already previously.  We just need to collect our modules.
+  MakeDir ${NACL_HOST_PYROOT}/python_modules/
+  if [ -e ${START_DIR}/modules.list ] ; then
+    LogExecute cp ${START_DIR}/modules.list \
+                  ${DEST_PYTHON_OBJS}/${PACKAGE_NAME}.list
+  fi
+  if [ -e ${START_DIR}/modules.libs ] ; then
+    LogExecute cp ${START_DIR}/modules.libs \
+                  ${DEST_PYTHON_OBJS}/${PACKAGE_NAME}.libs
+  fi
+}
 
 #
 # echo a command before exexuting it under 'time'

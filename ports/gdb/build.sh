@@ -11,7 +11,9 @@ ConfigureStep() {
       --with-system-readline \
       --disable-libmcheck \
       --prefix=${PREFIX} \
-      --host=${NACL_CROSS_PREFIX}
+      --enable-targets=arm-none-eabi-nacl \
+      --host=${NACL_CROSS_PREFIX} \
+      --target=x86_64-nacl
 
   # If the .info files don't exist, "make all" will try to recreate it with the
   # "makeinfo" tool, which isn't normally installed.
@@ -39,6 +41,12 @@ InstallStep() {
 
   MakeDir ${PUBLISH_DIR}
 
+  readonly TEMPLATE_EXPAND="${START_DIR}/../../build_tools/template_expand.py"
+  readonly REVISION=$(cd ${START_DIR} && git number 2>/dev/null || svnversion)
+  readonly REV_H=$(expr $REVISION / 65536)
+  readonly REV_L=$(expr $REVISION % 65536)
+  readonly VERSION=0.1.${REV_H}.${REV_L}
+
   # Tests
   local TEST_OUT_DIR="${PUBLISH_DIR}/tests"
   MakeDir ${TEST_OUT_DIR}
@@ -52,28 +60,53 @@ InstallStep() {
 
   # GDB App
   local GDB_APP_DIR="${PUBLISH_DIR}/gdb_app"
-  MakeDir ${GDB_APP_DIR}
+  MakeDir ${GDB_APP_DIR}/_platform_specific/${NACL_ARCH}
   LogExecute cp gdb/gdb.nexe \
-      ${GDB_APP_DIR}/gdb_${NACL_ARCH}${NACL_EXEEXT}
+      ${GDB_APP_DIR}/_platform_specific/${NACL_ARCH}/gdb${NACL_EXEEXT}
 
   pushd ${GDB_APP_DIR}
   python ${NACL_SDK_ROOT}/tools/create_nmf.py \
-      gdb_*${NACL_EXEEXT} \
+      _platform_specific/*/gdb*${NACL_EXEEXT} \
       -s . \
       -o gdb.nmf
   LogExecute python ${TOOLS_DIR}/create_term.py gdb.nmf
   popd
   LogExecute cp ${START_DIR}/background.js ${GDB_APP_DIR}
-  LogExecute cp ${START_DIR}/manifest.json ${GDB_APP_DIR}
   LogExecute cp ${START_DIR}/icon_16.png ${GDB_APP_DIR}
   LogExecute cp ${START_DIR}/icon_48.png ${GDB_APP_DIR}
   LogExecute cp ${START_DIR}/icon_128.png ${GDB_APP_DIR}
+  ${TEMPLATE_EXPAND} \
+    ${START_DIR}/manifest.json.template \
+    version=${VERSION} \
+    >${GDB_APP_DIR}/manifest.json
+  # Zip for upload to the web store.
+  pushd ${PUBLISH_DIR}
+  rm -f gdb_app.zip
+  zip -r gdb_app.zip gdb_app/
+  popd
 
   # Debug Extension
   local DEBUG_EXT_DIR="${PUBLISH_DIR}/debug_extension"
   MakeDir ${DEBUG_EXT_DIR}
   InstallNaClTerm ${DEBUG_EXT_DIR}
-  LogExecute cp ${START_DIR}/extension/* ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/background.js ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/devtools.html ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/devtools.js ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/icon_128.png ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/icon_16.png ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/icon_48.png ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/main.css ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/main.html ${DEBUG_EXT_DIR}
+  LogExecute cp ${START_DIR}/extension/main.js ${DEBUG_EXT_DIR}
+  ${TEMPLATE_EXPAND} \
+    ${START_DIR}/extension/manifest.json.template \
+    version=${VERSION} \
+    >${DEBUG_EXT_DIR}/manifest.json
+  # Zip for upload to the web store.
+  pushd ${PUBLISH_DIR}
+  rm -f debug_extension.zip
+  zip -r debug_extension.zip debug_extension/
+  popd
 }
 
 PostInstallTestStep() {

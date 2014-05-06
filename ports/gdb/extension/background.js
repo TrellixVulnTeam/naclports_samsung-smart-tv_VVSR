@@ -20,7 +20,7 @@ var GDB_EXTENSION_NAME = 'GDB';
  * ID of GDB app (used to establish contact).
  * @const
  */
-var GDB_EXTENSION_ID = 'mmgaaffjoeedmfdelihjppfdepcpophe';
+var GDB_EXTENSION_ID = 'gkjoooooiaohiceibmdleokniplmbahe';
 
 /**
  * Keep a run running snapshot of running NaCl modules.
@@ -43,15 +43,21 @@ var g_listeners = {};
 var g_listenerId = 0;
 
 /**
- * Keep a use settings in the background page to retain them across ui stop
- * start.
- * TODO(bradnelson): Keep this between sessions in localStorage?
+ * Default user settings values.
+ * @const
  */
-var g_settings = {
+var DEFAULT_SETTINGS = {
   onStartRun: true,  // Run (as opposed to attach) on module start.
   onFaultAttach: true,  // Attach on fault (as opposed to halting).
   showGdb: false,  // Show GDB modules in the list of NaCl apps.
 };
+
+/**
+ * Keep user settings in the background page to retain them across ui stop
+ * start.
+ * TODO(bradnelson): Keep this between sessions in localStorage?
+ */
+var g_settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 
 
 /**
@@ -261,6 +267,11 @@ function handleConnect(port) {
       g_settings = msg.settings;
       notifyListeners('settingsChange');
 
+    // Respond to a require to restore default settings (for testing).
+    } else if (msg.name === 'defaultSettings') {
+      g_settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+      notifyListeners('settingsChange');
+
     // Respond to an attach request from the UI.
     } else if (msg.name === 'attach') {
       if (msg.processId in g_naclModules) {
@@ -290,6 +301,10 @@ function handleConnect(port) {
           g_naclModules[tune].debugConnection.postMessage(msg);
         }
       }
+
+    // Respond to an install check message.
+    } else if (msg.name === 'installCheck') {
+      port.postMessage({'name': 'installCheckReply'});
     }
   });
 
@@ -308,13 +323,17 @@ function handleConnect(port) {
 chrome.runtime.onConnect.addListener(handleConnect);
 
 /**
- * Allow an external connection for testing only.
+ * Allow an external connection only for testing and install check.
  */
 chrome.runtime.onConnectExternal.addListener(function(port) {
   // Check the sender only when not in testing mode.
   if (navigator.userAgent.indexOf('ChromeTestAgent/') < 0) {
-    port.disconnect();
-    return;
+    // Reject if the sender is an extension (unsupported for now).
+    // Allow urls (as we're only whitelisted the install page).
+    if (port.sender.id !== undefined) {
+      port.disconnect();
+      return;
+    }
   }
   handleConnect(port);
 });

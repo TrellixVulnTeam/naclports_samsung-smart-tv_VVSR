@@ -23,9 +23,10 @@ import urlparse
 
 import sha1check
 
-MIRROR_URL = 'http://storage.googleapis.com/naclports/mirror/'
+MIRROR_URL = 'http://storage.googleapis.com/naclports/mirror'
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 NACLPORTS_ROOT = os.path.dirname(SCRIPT_DIR)
+PORTS_DIR = os.path.join(NACLPORTS_ROOT, "ports")
 OUT_DIR = os.path.join(NACLPORTS_ROOT, 'out')
 STAMP_DIR = os.path.join(OUT_DIR, 'stamp')
 BUILD_ROOT = os.path.join(OUT_DIR, 'build')
@@ -130,6 +131,8 @@ def GetCurrentLibc():
 
 
 def GetCurrentToolchain():
+  if os.environ.get('NACL_ARCH') == 'pnacl':
+    return 'pnacl'
   return os.environ.get('TOOLCHAIN') or 'newlib'
 
 
@@ -304,16 +307,24 @@ class Package(object):
   VALID_KEYS = ('NAME', 'VERSION', 'URL', 'ARCHIVE_ROOT', 'LICENSE', 'DEPENDS',
                 'MIN_SDK_VERSION', 'LIBC', 'DISABLED_ARCH', 'URL_FILENAME',
                 'BUILD_OS', 'SHA1', 'DISABLED')
+  VALID_SUBDIRS = ('', 'ports', 'python_modules')
 
   def __init__(self, pkg_root):
     self.root = os.path.abspath(pkg_root)
-    self.info = os.path.join(pkg_root, 'pkg_info')
+    self.basename = os.path.basename(self.root)
     keys = []
     for key in Package.VALID_KEYS:
       setattr(self, key, None)
     self.DEPENDS = []
-    if not os.path.exists(self.info):
+    self.info = None
+    for subdir in Package.VALID_SUBDIRS:
+        info = os.path.join(PORTS_DIR, subdir, self.basename, 'pkg_info')
+        if os.path.exists(info):
+          self.info = info
+          break
+    if self.info is None:
       raise Error('Invalid package folder: %s' % pkg_root)
+    self.root = os.path.dirname(self.info)
 
     with open(self.info) as f:
       for i, line in enumerate(f):
@@ -590,20 +601,28 @@ class Package(object):
 
     temp_filename = filename + '.partial'
     mirror_download_successfull = False
+    curl_cmd = ['curl', '--fail', '--location', '--stderr', '-',
+                '-o', temp_filename]
+    if os.isatty(sys.stdout.fileno()):
+      # Add --progress-bar but only if stdout is a TTY device.
+      curl_cmd.append('--progress-bar')
+    else:
+      # otherwise suppress all status output, since curl always
+      # assumes a TTY and writes \r and \b characters.
+      curl_cmd.append('--silent')
+
     if mirror:
       try:
-        mirror = self.GetMirrorURL()
-        Log('Downloading: %s [%s]' % (mirror, temp_filename))
-        cmd = ['wget', '-O', temp_filename, mirror]
-        subprocess.check_call(cmd)
+        mirror_url = self.GetMirrorURL()
+        Log('Downloading: %s [%s]' % (mirror_url, temp_filename))
+        subprocess.check_call(curl_cmd + [mirror_url])
         mirror_download_successfull = True
       except subprocess.CalledProcessError:
         pass
 
     if not mirror_download_successfull:
       Log('Downloading: %s [%s]' % (self.URL, temp_filename))
-      cmd = ['wget', '-O', temp_filename, self.URL]
-      subprocess.check_call(cmd)
+      subprocess.check_call(curl_cmd + [self.URL])
 
     os.rename(temp_filename, filename)
 
@@ -663,6 +682,9 @@ def run_main(args):
   Trace.verbose = verbose
   if options.verbose_build:
     os.environ['VERBOSE'] = '1'
+  else:
+    os.environ['VERBOSE'] = '0'
+    os.environ['V'] = '0'
 
   def DoCmd(package):
     try:

@@ -7,6 +7,15 @@
 MAKE_TARGETS="V=1"
 BUILD_DIR=${SRC_DIR}
 export CROSS_COMPILE=1
+EXTLIBS="-lppapi_simple -lnacl_spawn -lnacl_io -lppapi -lppapi_cpp -lcli_main"
+export EXTLIBS="-Wl,--start-group $EXTLIBS -Wl,--end-group"
+
+if [ "${NACL_SHARED}" != "1" ]; then
+  # These are needed so that the configure can detect libcurl when statically
+  # linked.
+ export LIBS="-lcurl -lssl -lcrypto -lz"
+ EXTLIBS+=" -lglibc-compat"
+fi
 
 if [ ${OS_NAME} = "Darwin" ]; then
   # gettext (msgfmt) doesn't exist on darwin by default.  homebrew installs
@@ -21,7 +30,7 @@ ConfigureStep() {
 
   if [ "${NACL_LIBC}" = "newlib" ]; then
     NACLPORTS_CPPFLAGS+=" -I${NACLPORTS_INCLUDE}/glibc-compat"
-    NACLPORTS_LDFLAGS+=" -lglibc-compat"
+    LIBS+=" -lglibc-compat"
   fi
 
   if [ "${NACL_LIBC}" = "glibc" ]; then
@@ -44,8 +53,14 @@ BuildStep() {
 
 InstallStep() {
   MakeDir ${PUBLISH_DIR}
-  local ASSEMBLY_DIR="${PUBLISH_DIR}/tar"
+  for name in $(cat ${START_DIR}/git_binaries.txt); do
+    cp ${name} ${PUBLISH_DIR}/${name}_${NACL_ARCH}${NACL_EXEEXT}
 
-  DESTDIR=${ASSEMBLY_DIR}
-  DefaultInstallStep
+    pushd ${PUBLISH_DIR}
+    LogExecute python ${NACL_SDK_ROOT}/tools/create_nmf.py \
+        ${PUBLISH_DIR}/${name}_*${NACL_EXEEXT} \
+        -s . \
+        -o ${name}.nmf
+    popd
+  done
 }
