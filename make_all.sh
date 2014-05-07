@@ -18,11 +18,11 @@ TARGETS=${TARGETS:-all}
 export BUILD_FLAGS=--ignore-disabled
 
 # x86_64 NaCl
-export NACL_ARCH=x86_64
-export TOOLCHAIN=glibc
-make ${TARGETS}
-export TOOLCHAIN=newlib
-make ${TARGETS}
+# export NACL_ARCH=x86_64
+# export TOOLCHAIN=glibc
+# make ${TARGETS}
+# export TOOLCHAIN=newlib
+# make ${TARGETS}
 
 # i686 NaCl
 export NACL_ARCH=i686
@@ -40,7 +40,7 @@ if [ -e ${NACL_SDK_ROOT}/toolchain/*_arm_bionic ]; then
   make ${TARGETS}
 fi
 
-# PNaCl
-export NACL_ARCH=pnacl
-export TOOLCHAIN=pnacl
-make ${TARGETS}
+# # PNaCl
+# export NACL_ARCH=pnacl
+# export TOOLCHAIN=pnacl
+# make ${TARGETS}
